@@ -7,7 +7,6 @@ fn main() {
 fn run(input: &str) -> usize {
     let mut grid: Grid = input.into();
     loop {
-        grid.print();
         let next_gen = grid.next_generation_a();
         if next_gen == grid {
             return grid.occupied_seats();
