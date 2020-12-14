@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 pub mod input;
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Position {
     x: usize,
     y: usize,
@@ -14,7 +12,7 @@ impl Position {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Seat {
     Empty,
     Occupied,
@@ -31,18 +29,18 @@ impl From<u8> for Seat {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct Grid {
     width: usize,
     height: usize,
-    map: HashMap<Position, Seat>,
+    vec: Vec<(Position, Seat)>,
 }
 
 impl Grid {
     pub fn next_generation_a(&self) -> Self {
-        let mut map = HashMap::new();
-        for (position, seat) in self.map.iter() {
-            map.insert(
+        let mut vec = Vec::new();
+        for (position, seat) in self.vec.iter() {
+            vec.push((
                 *position,
                 match seat {
                     Seat::Empty => {
@@ -61,19 +59,19 @@ impl Grid {
                     }
                     Seat::Floor => Seat::Floor,
                 },
-            );
+            ));
         }
         Grid {
             width: self.width,
             height: self.height,
-            map,
+            vec,
         }
     }
 
     pub fn next_generation_b(&self) -> Self {
-        let mut map = HashMap::new();
-        for (position, seat) in self.map.iter() {
-            map.insert(
+        let mut vec = Vec::new();
+        for (position, seat) in self.vec.iter() {
+            vec.push((
                 *position,
                 match seat {
                     Seat::Empty => {
@@ -92,20 +90,34 @@ impl Grid {
                     }
                     Seat::Floor => Seat::Floor,
                 },
-            );
+            ));
         }
         Grid {
             width: self.width,
             height: self.height,
-            map,
+            vec,
         }
     }
 
     pub fn occupied_seats(&self) -> usize {
-        self.map
+        self.vec
             .iter()
-            .filter(|(_, &seat)| seat == Seat::Occupied)
+            .filter(|(_, seat)| *seat == Seat::Occupied)
             .count()
+    }
+
+    pub fn print(&self) {
+        for (position, seat) in self.vec.iter() {
+            if position.x == 0 {
+                println!();
+            }
+            print!("{}", match seat {
+                Seat::Empty => "L",
+                Seat::Occupied => "#",
+                Seat::Floor => ".",
+            });
+        }
+        println!();
     }
 
     fn occupied_adjecent_seats_a(&self, position: &Position) -> usize {
@@ -143,13 +155,13 @@ impl Grid {
     fn get(&self, position: &Position, delta_x: isize, delta_y: isize) -> Seat {
         let x = position.x as isize + delta_x;
         let y = position.y as isize + delta_y;
-        if x < 0 || y < 0 {
-            Seat::Floor
+        if x >= 0 && (x as usize) < self.width && y >= 0 && (y as usize) < self.height {
+            self
+                .vec
+                .get(y as usize * self.width + x as usize)
+                .unwrap_or(&(Position::new(0, 0), Seat::Floor)).1
         } else {
-            *self
-                .map
-                .get(&Position::new(x as usize, y as usize))
-                .unwrap_or(&Seat::Floor)
+            Seat::Floor
         }
     }
 
@@ -157,11 +169,11 @@ impl Grid {
         let mut x = position.x as isize + delta_x;
         let mut y = position.y as isize + delta_y;
         while x >= 0 && (x as usize) < self.width && y >= 0 && (y as usize) < self.height {
-            let seat = *self
-                .map
-                .get(&Position::new(x as usize, y as usize))
-                .unwrap_or(&Seat::Floor);
-            if seat != Seat::Floor {
+            let seat = self
+                .vec
+                .get(y as usize * self.width + x as usize)
+                .unwrap_or(&(Position::new(0, 0), Seat::Floor)).1;
+        if seat != Seat::Floor {
                 return seat;
             }
             x += delta_x;
@@ -173,18 +185,18 @@ impl Grid {
 
 impl From<&str> for Grid {
     fn from(input: &str) -> Self {
-        let mut map = HashMap::new();
+        let mut vec = Vec::new();
         let mut height = 0;
         for (y, line) in input.lines().enumerate() {
             for (x, byte) in line.bytes().enumerate() {
-                map.insert(Position::new(x, y), byte.into());
+                vec.push((Position::new(x, y), byte.into()));
             }
             height += 1;
         }
         Grid {
             width: input.lines().nth(0).unwrap().bytes().count(),
             height,
-            map,
+            vec,
         }
     }
 }
