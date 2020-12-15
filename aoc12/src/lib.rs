@@ -76,25 +76,21 @@ impl Waypoint {
             b'S' => self.y -= instruction.value,
             b'E' => self.x += instruction.value,
             b'W' => self.x -= instruction.value,
-            b'L' => self.apply(&Instruction { action: b'R', value: 360 - instruction.value }),
+            b'L' => self.apply(&Instruction {
+                action: b'R',
+                value: 360 - instruction.value,
+            }),
             b'R' => {
-                let (x, y) = (self.x, self.y);
-                let angle = (instruction.value + 360) % 360;
-                self.x = match angle {
-                    0 => x,
-                    90 => y,
-                    180 => -x,
-                    270 => -y,
-                    _ => panic!("Invalid  angle")
+                let (x, y) = match instruction.value % 360 {
+                    0 => (self.x, self.y),
+                    90 => (self.y, -self.x),
+                    180 => (-self.x, -self.y),
+                    270 => (-self.y, self.x),
+                    _ => panic!("Invalid  angle"),
                 };
-                self.y = match angle {
-                    0 => y,
-                    90 => -x,
-                    180 => -y,
-                    270 => x,
-                    _ => panic!("Invalid  angle")
-                };
-            },
+                self.x = x;
+                self.y = y;
+            }
             b'F' => {
                 self.ship.apply(&Instruction {
                     action: b'E',
