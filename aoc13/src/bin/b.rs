@@ -14,18 +14,22 @@ fn earliest_timestamp(input: &str) -> usize {
         .filter_map(|(index, schedule)| match schedule {
             Schedule::Bus(bus_id) => Some((index, *bus_id)),
             _ => None,
-        }).collect();
+        })
+        .collect();
 
-    busses[1..].iter().fold((0, busses[0].1), |(offset1, step1), (offset2, step2)| {
+    busses[1..]
+        .iter()
+        .fold((0, busses[0].1), |(offset1, step1), (offset2, step2)| {
             let mut times1 = 1usize;
             let mut times2 = 0usize;
             loop {
-                let diff = (offset1 + offset2 + times1 * step1) as isize - (times2 * step2) as isize;
+                let diff =
+                    (offset1 + offset2 + times1 * step1) as isize - (times2 * step2) as isize;
                 match diff.signum() {
                     0 => return (offset1 + times1 * step1, step1.lcm(step2)),
                     -1 => times1 += (diff.abs() as usize).div_ceil(&step1),
                     1 => times2 += (diff.abs() as usize).div_ceil(&step2),
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 }
             }
         })
