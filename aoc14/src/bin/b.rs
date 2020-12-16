@@ -67,19 +67,19 @@ fn get_addresses(from: Vec<u64>, bitmask: u64) -> Vec<u64> {
     }
 
     // Find most right X
-    let mut addresses = vec![];
     let mut one_bitmask = 1;
     while one_bitmask & !bitmask > 0 {
         one_bitmask <<= 1;
     }
 
     // Replace the X for all items in from with 0 and 1
+    let mut addresses = vec![];
     for address in from {
         addresses.push(address & !one_bitmask);
         addresses.push(address | one_bitmask);
     }
 
-    // Continue till we have all X'es replaced
+    // Continue with a bitmask without the X we already replaced
     get_addresses(addresses, bitmask & !one_bitmask)
 }
 
