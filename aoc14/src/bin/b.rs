@@ -1,47 +1,140 @@
-// use aoc14::{input, *};
+use std::collections::{HashMap, HashSet};
 
-fn main() {
-    // println!("{}", earliest_timestamp(input::USER));
+use aoc14::input;
+
+#[derive(Debug)]
+enum Command {
+    SetBitmask { one: u64, floating: u64 },
+    SetValue { address: u64, value: u64 },
 }
 
-// fn earliest_timestamp(input: &str) -> usize {
-//     let schedules = parse_input(input).1;
-//     let busses: Vec<(usize, usize)> = schedules
-//         .iter()
-//         .enumerate()
-//         .filter_map(|(index, schedule)| match schedule {
-//             Schedule::Bus(bus_id) => Some((index, *bus_id)),
-//             _ => None,
-//         })
-//         .collect();
+fn parse_input(input: &str) -> Vec<Command> {
+    input
+        .lines()
+        .map(|line| {
+            let split: Vec<&str> = line.split(&[' ', '=', '[', ']'][..]).collect();
+            match split[0] {
+                "mask" => {
+                    let (one, floating) = split[3].bytes().fold((0, 0), |(one, floating), byte| {
+                        (
+                            (one << 1) + if byte == b'1' { 1 } else { 0 },
+                            (floating << 1) + if byte == b'X' { 1 } else { 0 },
+                        )
+                    });
+                    Command::SetBitmask { one, floating }
+                }
+                "mem" => Command::SetValue {
+                    address: split[1].parse().unwrap(),
+                    value: split[5].parse().unwrap(),
+                },
+                _ => panic!("Invalid input"),
+            }
+        })
+        .collect()
+}
+#[derive(Default, Debug)]
+struct Range {
+    bitmask_floating: u64,
+    value: u64,
+    excluded_bitmasks: HashSet<u64>,
+    count: u32,
+}
 
-//     busses[1..]
-//         .iter()
-//         .fold((0, busses[0].1), |(offset1, step1), (offset2, step2)| {
-//             let mut times1 = 1usize;
-//             let mut times2 = 0usize;
-//             loop {
-//                 let diff =
-//                     (offset1 + offset2 + times1 * step1) as isize - (times2 * step2) as isize;
-//                 match diff.signum() {
-//                     0 => return (offset1 + times1 * step1, step1.lcm(step2)),
-//                     -1 => times1 += (diff.abs() as usize).div_ceil(&step1),
-//                     1 => times2 += (diff.abs() as usize).div_ceil(&step2),
-//                     _ => unreachable!(),
-//                 }
-//             }
-//         })
-//         .0
-// }
+#[derive(Default, Debug)]
+struct Memory {
+    bitmask_one: u64,
+    bitmask_floating: u64,
+    ranges: HashMap<u64, Range>,
+}
 
-// #[test]
-// fn test_examples() {
-//     assert_eq!(earliest_timestamp(input::EXAMPLE), 1068781);
+impl Memory {
+    pub fn apply(&mut self, command: Command) {
+        match command {
+            Command::SetBitmask { one, floating } => {
+                self.bitmask_one = one;
+                self.bitmask_floating = floating;
+            }
+            Command::SetValue { address, value } => {
+                let base_address = (address | self.bitmask_one) & !self.bitmask_floating;
 
-//     assert_eq!(earliest_timestamp("0\n17,x,13"), 102);
-//     assert_eq!(earliest_timestamp("0\n17,x,13,19"), 3417);
-//     assert_eq!(earliest_timestamp("0\n67,7,59,61"), 754018);
-//     assert_eq!(earliest_timestamp("0\n67,x,7,59,61"), 779210);
-//     assert_eq!(earliest_timestamp("0\n67,7,x,59,61"), 1261476);
-//     assert_eq!(earliest_timestamp("0\n1789,37,47,1889"), 1202161486);
-// }
+                for (base, range) in self.ranges.iter_mut() {
+                    if base & !self.bitmask_floating == base_address & !range.bitmask_floating {
+                        let mut do_nothing = false;
+                        
+                        for excluded_bitmask in range.excluded_bitmasks.clone().into_iter() {
+                            if self.bitmask_floating & !excluded_bitmask == 0 {
+                                // Same or larger one is already excluded
+                                do_nothing = true;
+                                break;
+                            } else if excluded_bitmask & !self.bitmask_floating == 0 {
+                                // A smaller one is already there, remove it
+                                range.excluded_bitmasks.remove(&excluded_bitmask);
+                                range.count += 2u32.pow(excluded_bitmask.count_ones());
+                                break;
+                            }
+                        }
+                    
+                        if !do_nothing {
+                            range.excluded_bitmasks.insert(self.bitmask_floating);
+                            let sub = 2u32.pow(range.bitmask_floating.count_ones());
+                            if sub > range.count {
+                                // println!("{:#?}, {}", range, sub);
+                            } else {
+                                range.count -= sub;
+                            }
+                            println!("{:#?}", range);
+                        }
+                        // println!("Old: {:#?}", range);
+                        // range.bitmask_floating = range.bitmask_floating & !self.bitmask_floating;
+                        // println!("New: {:?}", range);
+                    }
+                }
+
+                self.ranges.insert(
+                    base_address,
+                    Range {
+                        bitmask_floating: self.bitmask_floating,
+                        value,
+                        excluded_bitmasks: HashSet::new(),
+                        count: 2u32.pow(self.bitmask_floating.count_ones()),
+                    },
+                );
+            }
+        }
+    }
+
+    pub fn sum_values(&self) -> u32 {
+        self.ranges.iter().fold(0, |acc, (_, range)| acc + range.count)
+    }
+
+    pub fn print_excluded_ranges(&self) {
+        for (_, range) in self.ranges.iter() {
+            if !range.excluded_bitmasks.is_empty() {
+                println!("{:#?}", range);
+            }
+        }
+    }
+}
+
+fn sum_memory(input: &str) -> u32 {
+    let mut memory = Memory::default();
+    for command in parse_input(input) {
+        // println!("{:?}", &command);
+        memory.apply(command);
+    }
+    memory.print_excluded_ranges();
+    memory.sum_values()
+}
+
+fn main() {
+    println!("{}", sum_memory(input::USER));
+}
+
+#[test]
+fn test_example() {
+    assert_eq!(sum_memory(input::EXAMPLE2), 208);
+}
+
+
+// Too low:  5140366174772
+// Too high: 5170037444560

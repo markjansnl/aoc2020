@@ -72,5 +72,5 @@ fn main() {
 
 #[test]
 fn test_example() {
-    assert_eq!(sum_memory(input::EXAMPLE), 165);
+    assert_eq!(sum_memory(input::EXAMPLE1), 165);
 }
