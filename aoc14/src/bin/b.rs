@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::{collections::HashMap, vec};
 
 use aoc14::input;
 
@@ -32,19 +32,12 @@ fn parse_input(input: &str) -> Vec<Command> {
         })
         .collect()
 }
-#[derive(Default, Debug)]
-struct Range {
-    bitmask_floating: u64,
-    value: u64,
-    excluded_bitmasks: HashSet<u64>,
-    count: u32,
-}
 
 #[derive(Default, Debug)]
 struct Memory {
     bitmask_one: u64,
     bitmask_floating: u64,
-    ranges: HashMap<u64, Range>,
+    map: HashMap<u64, u64>,
 }
 
 impl Memory {
@@ -55,74 +48,46 @@ impl Memory {
                 self.bitmask_floating = floating;
             }
             Command::SetValue { address, value } => {
-                let base_address = (address | self.bitmask_one) & !self.bitmask_floating;
-
-                for (base, range) in self.ranges.iter_mut() {
-                    if base & !self.bitmask_floating == base_address & !range.bitmask_floating {
-                        let mut do_nothing = false;
-                        
-                        for excluded_bitmask in range.excluded_bitmasks.clone().into_iter() {
-                            if self.bitmask_floating & !excluded_bitmask == 0 {
-                                // Same or larger one is already excluded
-                                do_nothing = true;
-                                break;
-                            } else if excluded_bitmask & !self.bitmask_floating == 0 {
-                                // A smaller one is already there, remove it
-                                range.excluded_bitmasks.remove(&excluded_bitmask);
-                                range.count += 2u32.pow(excluded_bitmask.count_ones());
-                                break;
-                            }
-                        }
-                    
-                        if !do_nothing {
-                            range.excluded_bitmasks.insert(self.bitmask_floating);
-                            let sub = 2u32.pow(range.bitmask_floating.count_ones());
-                            if sub > range.count {
-                                // println!("{:#?}, {}", range, sub);
-                            } else {
-                                range.count -= sub;
-                            }
-                            println!("{:#?}", range);
-                        }
-                        // println!("Old: {:#?}", range);
-                        // range.bitmask_floating = range.bitmask_floating & !self.bitmask_floating;
-                        // println!("New: {:?}", range);
-                    }
+                for addr in get_addresses(vec![address | self.bitmask_one], self.bitmask_floating) {
+                    self.map.insert(addr, value);
                 }
-
-                self.ranges.insert(
-                    base_address,
-                    Range {
-                        bitmask_floating: self.bitmask_floating,
-                        value,
-                        excluded_bitmasks: HashSet::new(),
-                        count: 2u32.pow(self.bitmask_floating.count_ones()),
-                    },
-                );
             }
         }
     }
 
-    pub fn sum_values(&self) -> u32 {
-        self.ranges.iter().fold(0, |acc, (_, range)| acc + range.count)
-    }
-
-    pub fn print_excluded_ranges(&self) {
-        for (_, range) in self.ranges.iter() {
-            if !range.excluded_bitmasks.is_empty() {
-                println!("{:#?}", range);
-            }
-        }
+    pub fn sum_values(&self) -> u64 {
+        self.map.iter().fold(0, |acc, (_, value)| acc + value)
     }
 }
 
-fn sum_memory(input: &str) -> u32 {
+fn get_addresses(from: Vec<u64>, bitmask: u64) -> Vec<u64> {
+    // Make sure the recursive function stops
+    if bitmask == 0 {
+        return from;
+    }
+
+    // Find most right X
+    let mut addresses = vec![];
+    let mut one_bitmask = 1;
+    while one_bitmask & !bitmask > 0 {
+        one_bitmask <<= 1;
+    }
+
+    // Replace the X for all items in from with 0 and 1
+    for address in from {
+        addresses.push(address & !one_bitmask);
+        addresses.push(address | one_bitmask);
+    }
+
+    // Continue till we have all X'es replaced
+    get_addresses(addresses, bitmask & !one_bitmask)
+}
+
+fn sum_memory(input: &str) -> u64 {
     let mut memory = Memory::default();
     for command in parse_input(input) {
-        // println!("{:?}", &command);
         memory.apply(command);
     }
-    memory.print_excluded_ranges();
     memory.sum_values()
 }
 
@@ -135,6 +100,9 @@ fn test_example() {
     assert_eq!(sum_memory(input::EXAMPLE2), 208);
 }
 
-
-// Too low:  5140366174772
-// Too high: 5170037444560
+#[test]
+fn test_addresses() {
+    assert_eq!(get_addresses(vec![0], 1), vec![0, 1]);
+    assert_eq!(get_addresses(vec![0], 6), vec![0, 4, 2, 6]);
+    assert_eq!(get_addresses(vec![2], 5), vec![2, 6, 3, 7]);
+}
