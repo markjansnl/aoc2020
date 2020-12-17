@@ -8,7 +8,7 @@ pub fn spoken_number(starting_numbers: Vec<usize>, nth: usize) -> usize {
     for turn in starting_numbers.len()..nth {
         number = match std::mem::replace(&mut map[number], turn) {
             0               => 0,
-            old_value => turn - old_value,
+            prev_turn => turn - prev_turn,
         }
     }
 
