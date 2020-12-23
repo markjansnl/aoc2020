@@ -31,32 +31,19 @@ impl Grid {
                 for x in 0..size {
                     let position = Position::new(x as isize - 1, y as isize - 1, z as isize);
                     let active_neighbours = self.active_neighbours(&position);
-                    vec.push(
-                        match self.get(&position, 0, 0, 0) {
-                            true => {
-                                active_neighbours == 2 || active_neighbours == 3
-                            },
-                            false => {
-                                active_neighbours == 3
-                            },
-                        }
-                    )
+                    vec.push(match self.get(&position, 0, 0, 0) {
+                        true => active_neighbours == 2 || active_neighbours == 3,
+                        false => active_neighbours == 3,
+                    })
                 }
             }
         }
 
-        Grid {
-            size,
-            layers,
-            vec,
-        }
+        Grid { size, layers, vec }
     }
 
     pub fn cubes_active(&self) -> usize {
-        let all_layers = self.vec
-            .iter()
-            .filter(|active| **active)
-            .count();
+        let all_layers = self.vec.iter().filter(|active| **active).count();
 
         let layer0 = self.vec[0..self.size * self.size]
             .iter()
@@ -74,10 +61,13 @@ impl Grid {
                     println!("z={}", index / self.size / self.size);
                 }
             }
-            print!("{}", match active {
-                true  => "#",
-                false => ".",
-            });
+            print!(
+                "{}",
+                match active {
+                    true => "#",
+                    false => ".",
+                }
+            );
         }
         println!();
     }
@@ -88,13 +78,17 @@ impl Grid {
             for delta_y in -1isize..=1 {
                 for delta_x in -1isize..=1 {
                     if !(delta_x == 0 && delta_y == 0 && delta_z == 0) {
-                        active_neighbours += if self.get(position, delta_x, delta_y, delta_z) { 1 } else { 0 };
+                        active_neighbours += if self.get(position, delta_x, delta_y, delta_z) {
+                            1
+                        } else {
+                            0
+                        };
                         if active_neighbours == 4 {
                             return 4;
                         }
                     }
-                }            
-            }    
+                }
+            }
         }
         active_neighbours
     }
@@ -104,7 +98,12 @@ impl Grid {
         let x = position.x as isize + delta_x;
         let y = position.y as isize + delta_y;
         let z = (position.z as isize + delta_z).abs() as usize;
-        if x >= 0 && (x as usize) < self.size && y >= 0 && (y as usize) < self.size && z < self.layers {
+        if x >= 0
+            && (x as usize) < self.size
+            && y >= 0
+            && (y as usize) < self.size
+            && z < self.layers
+        {
             let result = *self
                 .vec
                 .get(z * self.size * self.size + y as usize * self.size + x as usize)
