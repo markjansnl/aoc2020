@@ -7,16 +7,16 @@ fn evaluate(input: &str) -> u64 {
             line.bytes().fold(vec![(0u64, b'+')], |mut stack, byte| {
                 match byte {
                     b' ' => {}
+                    b'+' | b'*' => {
+                        stack.last_mut().unwrap().1 = byte;
+                    }
                     b'(' => {
                         stack.push((0, b'+'));
                     }
                     b')' => {
-                        let (value1, _) = stack.pop().unwrap();
-                        let (value2, operator2) = stack.last().unwrap();
-                        stack.last_mut().unwrap().0 = if *operator2 == b'+' { value1 + value2 } else { value1 * value2 };
-                    }
-                    b'+' | b'*' => {
-                        stack.last_mut().unwrap().1 = byte;
+                        let (value2, _) = stack.pop().unwrap();
+                        let (value1, operator) = stack.last().unwrap();
+                        stack.last_mut().unwrap().0 = if *operator == b'+' { value1 + value2 } else { value1 * value2 };
                     }
                     _ => {
                         let (value1, operator) = stack.last().unwrap();
