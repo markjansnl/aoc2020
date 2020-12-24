@@ -13,11 +13,7 @@ fn evaluate(input: &str) -> u64 {
                     b')' => {
                         let (value1, _) = stack.pop().unwrap();
                         let (value2, operator2) = stack.last().unwrap();
-                        stack.last_mut().unwrap().0 = match operator2 {
-                            b'+' => value1 + *value2,
-                            b'*' => value1 * *value2,
-                            _ => panic!("unknown operator"),
-                        };
+                        stack.last_mut().unwrap().0 = if *operator2 == b'+' { value1 + value2 } else { value1 * value2 };
                     }
                     b'+' | b'*' => {
                         stack.last_mut().unwrap().1 = byte;
@@ -25,11 +21,7 @@ fn evaluate(input: &str) -> u64 {
                     _ => {
                         let (value1, operator) = stack.last().unwrap();
                         let value2 = byte as u64 - 48;
-                        stack.last_mut().unwrap().0 = match operator {
-                            b'+' => value1 + value2,
-                            b'*' => value1 * value2,
-                            _ => panic!("unknown operator"),
-                        };
+                        stack.last_mut().unwrap().0 = if *operator == b'+' { value1 + value2 } else { value1 * value2 };
                     }
                 }
                 stack
