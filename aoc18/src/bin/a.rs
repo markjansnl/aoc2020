@@ -36,7 +36,7 @@ fn main() {
 }
 
 #[test]
-fn test_example() {
+fn test_part1_example() {
     assert_eq!(evaluate("1 + 2 * 3 + 4 * 5 + 6"), 71);
     assert_eq!(evaluate("1 + (2 * 3) + (4 * (5 + 6))"), 51);
     assert_eq!(evaluate("2 * 3 + (4 * 5)"), 26);
