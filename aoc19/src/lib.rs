@@ -49,15 +49,15 @@ impl Rules {
         self.rules.insert(rule_nr, rule)
     }
 
-    pub fn validate_line(&self, line: &str, rule_nr: u8) -> Option<usize> {
-        if line.len() == 0 {
+    pub fn validate_line(&self, line: &str, start_index: usize, rule_nr: u8) -> Option<usize> {
+        if start_index >= line.len() {
             return None;
         }
 
         let rule = self.rules.get(&rule_nr).unwrap();
         let valid = match rule {
             Rule::Char(char) => {
-                if line.as_bytes()[0] == *char {
+                if line.as_bytes()[start_index] == *char {
                     Some(1)
                 } else {
                     None
@@ -67,8 +67,8 @@ impl Rules {
                 .iter()
                 .filter_map(|subrule| {
                     subrule.iter().try_fold(0, |acc, subrule_nr| {
-                        self.validate_line(&line[acc..], *subrule_nr)
-                            .map(|eaten| eaten + acc)
+                        self.validate_line(&line, start_index + acc, *subrule_nr)
+                            .map(|eaten| acc + eaten)
                     })
                 })
                 .next(),
