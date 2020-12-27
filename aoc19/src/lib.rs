@@ -72,6 +72,8 @@ impl Rules {
                     })
                 })
                 .next(),
+                // Both left and right submatch are valid. In some cases we need the other one, so more
+                // are valid than what now is calculated
         };
         valid
     }
