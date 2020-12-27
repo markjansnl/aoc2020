@@ -67,11 +67,10 @@ impl Rules {
                 .iter()
                 .map(|subrule| {
                     subrule.iter().fold(vec![start_index], |acc, subrule_nr| {
-                        acc.iter().map(|index| {
-                            self.validate_line(&line, *index, *subrule_nr)
-                        })
-                        .flatten()
-                        .collect::<Vec<usize>>()
+                        acc.iter()
+                            .map(|index| self.validate_line(&line, *index, *subrule_nr))
+                            .flatten()
+                            .collect::<Vec<usize>>()
                     })
                 })
                 .flatten()

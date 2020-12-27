@@ -1,4 +1,4 @@
-use aoc19::{Rule, Rules, input};
+use aoc19::{input, Rule, Rules};
 
 fn count_valid(input: &str) -> usize {
     let mut input_split = input.split("\n\n");
@@ -13,7 +13,8 @@ fn count_valid(input: &str) -> usize {
         .lines()
         .filter(|line| {
             rules
-                .validate_line(line, 0, 0).iter()
+                .validate_line(line, 0, 0)
+                .iter()
                 .any(|len| *len == line.len())
         })
         .count()

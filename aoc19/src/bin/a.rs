@@ -10,7 +10,8 @@ fn count_valid(input: &str) -> usize {
         .lines()
         .filter(|line| {
             rules
-                .validate_line(line, 0, 0).iter()
+                .validate_line(line, 0, 0)
+                .iter()
                 .any(|len| *len == line.len())
         })
         .count()
