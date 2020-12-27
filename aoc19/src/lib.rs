@@ -58,7 +58,7 @@ impl Rules {
         let valid = match rule {
             Rule::Char(char) => {
                 if line.as_bytes()[start_index] == *char {
-                    Some(1)
+                    Some(start_index + 1)
                 } else {
                     None
                 }
@@ -66,14 +66,11 @@ impl Rules {
             Rule::SubRules(subrules) => subrules
                 .iter()
                 .filter_map(|subrule| {
-                    subrule.iter().try_fold(0, |acc, subrule_nr| {
-                        self.validate_line(&line, start_index + acc, *subrule_nr)
-                            .map(|eaten| acc + eaten)
+                    subrule.iter().try_fold(start_index, |acc, subrule_nr| {
+                        self.validate_line(&line, acc, *subrule_nr)
                     })
                 })
                 .next(),
-                // Both left and right submatch are valid. In some cases we need the other one, so more
-                // are valid than what now is calculated
         };
         valid
     }
