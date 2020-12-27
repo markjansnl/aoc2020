@@ -49,28 +49,33 @@ impl Rules {
         self.rules.insert(rule_nr, rule)
     }
 
-    pub fn validate_line(&self, line: &str, start_index: usize, rule_nr: u8) -> Option<usize> {
+    pub fn validate_line(&self, line: &str, start_index: usize, rule_nr: u8) -> Vec<usize> {
         if start_index >= line.len() {
-            return None;
+            return vec![];
         }
 
         let rule = self.rules.get(&rule_nr).unwrap();
         let valid = match rule {
             Rule::Char(char) => {
                 if line.as_bytes()[start_index] == *char {
-                    Some(start_index + 1)
+                    vec![start_index + 1]
                 } else {
-                    None
+                    vec![]
                 }
             }
             Rule::SubRules(subrules) => subrules
                 .iter()
-                .filter_map(|subrule| {
-                    subrule.iter().try_fold(start_index, |acc, subrule_nr| {
-                        self.validate_line(&line, acc, *subrule_nr)
+                .map(|subrule| {
+                    subrule.iter().fold(vec![start_index], |acc, subrule_nr| {
+                        acc.iter().map(|index| {
+                            self.validate_line(&line, *index, *subrule_nr)
+                        })
+                        .flatten()
+                        .collect::<Vec<usize>>()
                     })
                 })
-                .next(),
+                .flatten()
+                .collect(),
         };
         valid
     }
