@@ -159,6 +159,16 @@ impl Tile {
         let mut top_flipped = 0;
 
         self.pixels.iter().enumerate().for_each(|(index, line)| {
+            if index == 9 {
+                bottom = line
+                    .iter()
+                    .rev()
+                    .fold(0, |acc, pixel| (acc << 1) + if *pixel { 1 } else { 0 });
+                bottom_flipped = line
+                    .iter()
+                    .fold(0, |acc, pixel| (acc << 1) + if *pixel { 1 } else { 0 });
+            }
+
             if index == 0 {
                 top = line
                     .iter()
@@ -168,20 +178,12 @@ impl Tile {
                     .rev()
                     .fold(0, |acc, pixel| (acc << 1) + if *pixel { 1 } else { 0 });
             }
-            if index == 9 {
-                bottom = line
-                    .iter()
-                    .fold(0, |acc, pixel| (acc << 1) + if *pixel { 1 } else { 0 });
-                bottom_flipped = line
-                    .iter()
-                    .rev()
-                    .fold(0, |acc, pixel| (acc << 1) + if *pixel { 1 } else { 0 });
-            }
-            left = (left << 1) + if *line.first().unwrap() { 1 } else { 0 };
-            left_flipped = left_flipped + (if *line.first().unwrap() { 1 } else { 0 } << index);
 
             right = (right << 1) + if *line.last().unwrap() { 1 } else { 0 };
             right_flipped = right_flipped + (if *line.last().unwrap() { 1 } else { 0 } << index);
+
+            left = left + (if *line.first().unwrap() { 1 } else { 0 } << index);
+            left_flipped = (left_flipped << 1) + if *line.first().unwrap() { 1 } else { 0 };
         });
 
         vec![
@@ -229,7 +231,6 @@ impl Tile {
     }
 
     fn flip_rotate(&self, border_id: usize, side: BorderSide) -> Tile {
-        dbg!(border_id, side);
         let mut tile = self.clone();
         let border = self
             .borders()
@@ -237,18 +238,17 @@ impl Tile {
             .filter(|border| border.id == border_id)
             .nth(0)
             .unwrap();
-        dbg!(&border);
+        tile = tile.rotate(side - border.side);
         if border.flipped {
-            if border.side == BorderSide::Left {
-                tile = self.flip().rotate(180);
+            tile = tile.flip_horizontal();
+            if side == BorderSide::Left || side == BorderSide::Right {
+                tile = tile.rotate(180);
             }
-            tile.rotate(border.side - side)
-        } else {
-            tile.rotate(side - border.side)
         }
+        tile
     }
 
-    fn flip(&self) -> Tile {
+    fn flip_horizontal(&self) -> Tile {
         let mut tile = self.clone();
         tile.pixels = self
             .pixels
@@ -288,7 +288,8 @@ impl Tile {
 impl From<Image> for ConstructedImage {
     fn from(image: Image) -> Self {
         let border_map = image.border_map();
-        let first_corner = dbg!(image.corners_from_border_map(&border_map))
+        let first_corner = image
+            .corners_from_border_map(&border_map)
             .into_iter()
             .find(|tile| {
                 let borders = tile.borders();
@@ -300,7 +301,6 @@ impl From<Image> for ConstructedImage {
 
         for y in 0..size {
             for x in 0..size {
-                println!("y: {}, x: {}", y, x);
                 if x == 0 {
                     if y == 0 {
                         tiles.push(first_corner.clone());
@@ -317,7 +317,10 @@ impl From<Image> for ConstructedImage {
                             .iter()
                             .find(|tile| tile.id != tile_above.id)
                             .unwrap();
-                        tiles.push(tile.flip_rotate(tile_above_borders[1].id, BorderSide::Top));
+                        tiles.push(
+                            tile.flip_rotate(tile_above_borders[1].id, BorderSide::Top)
+                                .flip_horizontal(),
+                        );
                     }
                 } else {
                     let tile_left = tiles.last().unwrap();
@@ -331,33 +334,29 @@ impl From<Image> for ConstructedImage {
                         .iter()
                         .find(|tile| tile.id != tile_left.id)
                         .unwrap();
-                    tiles.push(tile.flip_rotate(tile_left_borders[0].id, BorderSide::Left));
+                    tiles.push(
+                        tile.flip_rotate(tile_left_borders[0].id, BorderSide::Left)
+                            .flip_horizontal()
+                            .rotate(180),
+                    );
                 }
             }
         }
 
         let mut pixels = Vec::new();
-        let mut tile_iter = tiles
-            .iter()
-            .inspect(|tile| {
-                print!("{}, ", tile.id);
-            })
-            .map(|tile| tile.pixels.clone()); //_without_border());
+        let mut tile_iter = tiles.iter().map(|tile| tile.pixels_without_border());
         for y in 0..size {
             for x in 0..size {
                 if x == 0 {
-                    for _ in 0..10 {
+                    for _ in 0..8 {
                         pixels.push(Vec::new());
                     }
                 }
                 let tile = tile_iter.next().unwrap();
                 for (index, mut line) in tile.into_iter().enumerate() {
-                    pixels[y * 11 + index].append(&mut line);
-                    pixels[y * 11 + index].push(false);
+                    pixels[y * 8 + index].append(&mut line);
                 }
             }
-            pixels.push(Vec::new());
-            println!();
         }
 
         ConstructedImage { pixels }
