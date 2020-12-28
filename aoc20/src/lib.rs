@@ -1,9 +1,13 @@
-use std::{collections::HashMap, fmt};
+use std::{collections::HashMap, fmt, ops::Sub, vec};
 
 pub mod input;
 
 pub struct Image {
     tiles: Vec<Tile>,
+}
+
+pub struct ConstructedImage {
+    pixels: Vec<Vec<bool>>,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -12,7 +16,7 @@ pub struct Tile {
     pixels: Vec<Vec<bool>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 enum BorderSide {
     Top,
     Bottom,
@@ -27,6 +31,25 @@ struct Border {
     flipped: bool,
 }
 
+impl BorderSide {
+    fn angle(&self) -> u16 {
+        match *self {
+            BorderSide::Top => 0,
+            BorderSide::Right => 90,
+            BorderSide::Bottom => 180,
+            BorderSide::Left => 270,
+        }
+    }
+}
+
+impl Sub<BorderSide> for BorderSide {
+    type Output = u16;
+
+    fn sub(self, rhs: BorderSide) -> Self::Output {
+        (360 + self.angle() - rhs.angle()) % 360
+    }
+}
+
 impl From<&str> for Image {
     fn from(input: &str) -> Self {
         Image {
@@ -39,9 +62,36 @@ impl From<&str> for Image {
 }
 
 impl Image {
+    pub fn size(&self) -> usize {
+        (self.tiles.len() as f64).sqrt() as usize
+    }
+
     pub fn corners(&self) -> Vec<Tile> {
-        let mut border_map: HashMap<usize, Vec<Tile>> = HashMap::new();
+        self.corners_from_border_map(&self.border_map())
+    }
+
+    fn corners_from_border_map(&self, border_map: &HashMap<usize, Vec<Tile>>) -> Vec<Tile> {
         let mut count_map: HashMap<Tile, usize> = HashMap::new();
+
+        for (_, tiles) in border_map {
+            for tile in tiles {
+                count_map
+                    .entry(tile.clone())
+                    .and_modify(|count| *count += 1)
+                    .or_insert(1);
+            }
+        }
+
+        count_map
+            .iter()
+            // Corners have 2 borders with an adjecent piece. Borders are counted from both sides, so are counted double (**count == 4)
+            .filter(|(_, count)| **count == 4)
+            .map(|(tile, _)| tile.clone())
+            .collect()
+    }
+
+    fn border_map(&self) -> HashMap<usize, Vec<Tile>> {
+        let mut border_map: HashMap<usize, Vec<Tile>> = HashMap::new();
 
         for tile in self.tiles.iter() {
             for border in tile.borders().iter() {
@@ -52,22 +102,8 @@ impl Image {
             }
         }
 
-        for (_, tiles) in border_map {
-            if tiles.len() == 2 {
-                for tile in tiles {
-                    count_map
-                        .entry(tile)
-                        .and_modify(|count| *count += 1)
-                        .or_insert(1);
-                }
-            }
-        }
-
-        count_map
-            .iter()
-            .filter(|(_, count)| **count == 4) // Corders have 2 borders with an adjecent piece. Counted twice = 4
-            .map(|(tile, _)| tile.clone())
-            .collect()
+        border_map.retain(|_, tiles| tiles.len() == 2);
+        border_map
     }
 }
 
@@ -190,5 +226,148 @@ impl Tile {
                 flipped: true,
             },
         ]
+    }
+
+    fn flip_rotate(&self, border_id: usize, side: BorderSide) -> Tile {
+        let mut tile = self.clone();
+        let border = self
+            .borders()
+            .into_iter()
+            .filter(|border| border.id == border_id)
+            .nth(0)
+            .unwrap();
+        if !border.flipped {
+            tile = self.flip();
+        }
+        tile.rotate(side - border.side)
+    }
+
+    fn flip(&self) -> Tile {
+        let mut tile = self.clone();
+        tile.pixels = self
+            .pixels
+            .iter()
+            .cloned()
+            .map(|line| line.iter().rev().cloned().collect())
+            .collect();
+        tile
+    }
+
+    fn rotate(&self, angle: u16) -> Tile {
+        let mut tile = self.clone();
+        for y in 0..10 {
+            for x in 0..10 {
+                tile.pixels[y][x] = match angle {
+                    90 => self.pixels[9 - x][y].clone(),
+                    180 => self.pixels[9 - y][9 - x].clone(),
+                    270 => self.pixels[x][9 - y].clone(),
+                    _ => self.pixels[y][x].clone(),
+                }
+            }
+        }
+        tile
+    }
+
+    fn pixels_without_border(&self) -> Vec<Vec<bool>> {
+        self.pixels
+            .iter()
+            .skip(1)
+            .take(8)
+            .cloned()
+            .map(|line| line.iter().skip(1).take(8).cloned().collect())
+            .collect()
+    }
+}
+
+impl From<Image> for ConstructedImage {
+    fn from(image: Image) -> Self {
+        let border_map = image.border_map();
+        let first_corner = image
+            .corners_from_border_map(&border_map)
+            .into_iter()
+            .find(|tile| {
+                let borders = tile.borders();
+                border_map.contains_key(&borders[1].id) && border_map.contains_key(&borders[3].id)
+            })
+            .unwrap();
+        let mut tiles = vec![];
+        let size = image.size();
+
+        for y in 0..size {
+            for x in 0..size {
+                if x == 0 {
+                    if y == 0 {
+                        tiles.push(first_corner.clone());
+                    } else {
+                        let tile_above = &tiles[(y - 1) * size];
+                        let tile_above_borders = tile_above.borders();
+                        let tile_above_border_id =
+                            if border_map.contains_key(&tile_above_borders[1].id) {
+                                tile_above_borders[1].id
+                            } else {
+                                tile_above_borders[5].id
+                            };
+                        let tile = border_map[&tile_above_border_id]
+                            .iter()
+                            .find(|tile| tile.id != tile_above.id)
+                            .unwrap();
+                        tiles.push(tile.flip_rotate(tile_above_border_id, BorderSide::Top));
+                    }
+                } else {
+                    let tile_left = tiles.last().unwrap();
+                    let tile_left_borders = tile_left.borders();
+                    let tile_left_border_id = if border_map.contains_key(&tile_left_borders[3].id) {
+                        tile_left_borders[3].id
+                    } else {
+                        tile_left_borders[7].id
+                    };
+                    let tile = border_map[&tile_left_border_id]
+                        .iter()
+                        .find(|tile| tile.id != tile_left.id)
+                        .unwrap();
+                    tiles.push(
+                        tile.flip_rotate(tile_left_border_id, BorderSide::Left)
+                            .rotate(180),
+                    );
+                }
+            }
+        }
+
+        let mut pixels = Vec::new();
+        let mut tile_iter = tiles.iter().map(|tile| tile.pixels_without_border());
+        for y in 0..size {
+            for x in 0..size {
+                if x == 0 {
+                    for _ in 0..8 {
+                        pixels.push(Vec::new());
+                    }
+                }
+                let tile = tile_iter.next().unwrap();
+                for (index, mut line) in tile.into_iter().enumerate() {
+                    pixels[y * 8 + index].append(&mut line);
+                }
+            }
+        }
+
+        ConstructedImage { pixels }
+    }
+}
+
+impl fmt::Debug for ConstructedImage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let pixels = self
+            .pixels
+            .iter()
+            .map(|line| {
+                line.iter().fold(String::new(), |mut pixel_line, pixel| {
+                    pixel_line.push(if *pixel { '#' } else { '.' });
+                    pixel_line
+                })
+            })
+            .collect::<Vec<String>>();
+
+        f.debug_struct("ConstructedImage")
+            .field("pixels", &pixels)
+            .finish()
     }
 }
