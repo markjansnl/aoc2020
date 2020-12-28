@@ -1,3 +1,4 @@
+use regex::Regex;
 use std::{collections::HashMap, fmt, ops::Sub, vec};
 
 pub mod input;
@@ -6,6 +7,7 @@ pub struct Image {
     tiles: Vec<Tile>,
 }
 
+#[derive(Clone)]
 pub struct ConstructedImage {
     pixels: Vec<Vec<bool>>,
 }
@@ -152,7 +154,6 @@ impl Tile {
         let mut left = 0;
         let mut top = 0;
 
-        // horizontal flipped
         let mut right_flipped = 0;
         let mut bottom_flipped = 0;
         let mut left_flipped = 0;
@@ -365,19 +366,82 @@ impl From<Image> for ConstructedImage {
 
 impl fmt::Debug for ConstructedImage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let pixels = self
-            .pixels
-            .iter()
-            .map(|line| {
-                line.iter().fold(String::new(), |mut pixel_line, pixel| {
-                    pixel_line.push(if *pixel { '#' } else { '.' });
-                    pixel_line
-                })
-            })
-            .collect::<Vec<String>>();
-
         f.debug_struct("ConstructedImage")
-            .field("pixels", &pixels)
+            .field(
+                "pixels",
+                &self.as_string().split("\n").collect::<Vec<&str>>(),
+            )
             .finish()
+    }
+}
+
+impl ConstructedImage {
+    pub fn count_without_sea_monsters(&self) -> usize {
+        self.pixels
+            .iter()
+            .flatten()
+            .fold(0, |acc, pixel| acc + if *pixel { 1 } else { 0 })
+            - self.count_sea_monsters() * 15
+    }
+
+    fn count_sea_monsters(&self) -> usize {
+        let mut image = self.clone();
+        let size = image.pixels.len();
+        let mut sea_monster_count = vec![];
+
+        let re = Regex::new(
+            format!(
+                r"..................#..{{{}}}#....##....##....###..{{{}}}#..#..#..#..#..#...",
+                size - 20,
+                size - 20
+            )
+            .as_ref(),
+        )
+        .unwrap();
+
+        for i in 0..8 {
+            sea_monster_count.push(
+                re.captures_iter(image.as_string().replace("\n", "").as_str())
+                    .count(),
+            );
+
+            image = image.rotate_right();
+            if i == 3 {
+                image = image.flip_horizontal();
+            }
+        }
+        sea_monster_count.into_iter().max().unwrap()
+    }
+
+    fn as_string(&self) -> String {
+        self.pixels.iter().fold(String::new(), |mut string, line| {
+            for pixel in line {
+                string.push(if *pixel { '#' } else { '.' });
+            }
+            string.push('\n');
+            string
+        })
+    }
+
+    fn flip_horizontal(&self) -> ConstructedImage {
+        ConstructedImage {
+            pixels: self
+                .pixels
+                .iter()
+                .cloned()
+                .map(|line| line.iter().rev().cloned().collect())
+                .collect(),
+        }
+    }
+
+    fn rotate_right(&self) -> ConstructedImage {
+        let mut constructed_image = self.clone();
+        let size = self.pixels.len();
+        for y in 0..size {
+            for x in 0..size {
+                constructed_image.pixels[y][x] = self.pixels[size - 1 - x][y].clone();
+            }
+        }
+        constructed_image
     }
 }

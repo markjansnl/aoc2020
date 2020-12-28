@@ -3,11 +3,11 @@ use aoc20::{input, ConstructedImage, Image};
 fn count_without_sea_monsters(input: &str) -> usize {
     let image: Image = input.into();
     let constructed_image: ConstructedImage = image.into();
-    dbg!(constructed_image);
-    0
+    constructed_image.count_without_sea_monsters()
 }
 
 fn main() {
+    // 2443 is too high
     println!("{}", count_without_sea_monsters(input::USER));
 }
 
