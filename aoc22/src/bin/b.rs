@@ -1,4 +1,7 @@
-use std::{collections::{HashSet, VecDeque}, vec};
+use std::{
+    collections::{HashSet, VecDeque},
+    vec,
+};
 
 use aoc22::input;
 
@@ -14,7 +17,7 @@ fn winning_score(input: &str) -> usize {
         .collect();
 
     play(&mut decks);
-    
+
     decks
         .iter()
         .flatten()
@@ -27,7 +30,6 @@ fn winning_score(input: &str) -> usize {
 fn play(decks: &mut Vec<VecDeque<u8>>) {
     let mut rounds = HashSet::new();
     while !decks[0].is_empty() && !decks[1].is_empty() {
-
         if rounds.contains(decks) {
             decks[1].clear();
             return;
@@ -55,7 +57,7 @@ fn play(decks: &mut Vec<VecDeque<u8>>) {
             decks[1].push_back(b);
             decks[1].push_back(a);
         }
-}
+    }
 }
 
 fn main() {

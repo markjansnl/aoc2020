@@ -24,7 +24,7 @@ fn winning_score(input: &str) -> usize {
             decks[1].push_back(a);
         }
     }
-    
+
     decks
         .iter()
         .flatten()
