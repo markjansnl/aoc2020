@@ -1,4 +1,3 @@
-use regex::Regex;
 use std::{collections::HashMap, fmt, ops::Sub, vec};
 
 pub mod input;
@@ -380,7 +379,8 @@ impl ConstructedImage {
         self.pixels
             .iter()
             .flatten()
-            .fold(0, |acc, pixel| acc + if *pixel { 1 } else { 0 })
+            .filter(|pixel| **pixel)
+            .count()
             - self.count_sea_monsters() * 15
     }
 
@@ -389,19 +389,41 @@ impl ConstructedImage {
         let size = image.pixels.len();
         let mut sea_monster_count = vec![];
 
-        let re = Regex::new(
-            format!(
-                r"..................#..{{{}}}#....##....##....###..{{{}}}#..#..#..#..#..#...",
-                size - 20,
-                size - 20
-            )
-            .as_ref(),
-        )
-        .unwrap();
+        let mut sea_monster = vec![
+            false, false, false, false, false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, true, false,
+        ];
+        for _ in 0..size - 20 {
+            sea_monster.push(false);
+        }
+        sea_monster.append(&mut vec![
+            true, false, false, false, false, true, true, false, false, false, false, true, true,
+            false, false, false, false, true, true, true,
+        ]);
+        for _ in 0..size - 20 {
+            sea_monster.push(false);
+        }
+        sea_monster.append(&mut vec![
+            false, true, false, false, true, false, false, true, false, false, true, false, false,
+            true, false, false, true, false, false, false,
+        ]);
 
         for i in 0..8 {
+            let flatten_image = image
+                .pixels
+                .iter()
+                .cloned()
+                .flatten()
+                .collect::<Vec<bool>>();
+            let to = flatten_image.len() - sea_monster.len();
             sea_monster_count.push(
-                re.captures_iter(image.as_string().replace("\n", "").as_str())
+                (0..to)
+                    .filter(|&i| {
+                        flatten_image[i..i + sea_monster.len()]
+                            .iter()
+                            .zip(sea_monster.iter())
+                            .all(|(a, b)| *a & *b == *b)
+                    })
                     .count(),
             );
 

@@ -7,7 +7,6 @@ fn count_without_sea_monsters(input: &str) -> usize {
 }
 
 fn main() {
-    // 2443 is too high
     println!("{}", count_without_sea_monsters(input::USER));
 }
 

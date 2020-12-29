@@ -15,4 +15,3 @@ name = "b"
 path = "src/bin/b.rs"
 
 [dependencies]
-regex = "1"
