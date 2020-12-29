@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use aoc22::input;
 
 fn winning_score(input: &str) -> usize {
-    let mut decks: Vec<VecDeque<u16>> = input
+    let mut decks: Vec<VecDeque<u8>> = input
         .split("\n\n")
         .map(|deck| {
             deck.lines()
