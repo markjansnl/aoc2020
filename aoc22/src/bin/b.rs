@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashSet, VecDeque},
-    vec,
-};
+use std::collections::{HashSet, VecDeque};
 
 use aoc22::input;
 
