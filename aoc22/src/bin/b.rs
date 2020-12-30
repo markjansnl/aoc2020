@@ -39,7 +39,7 @@ fn play(decks: &mut Vec<VecDeque<u8>>) {
         let a = decks[0].pop_front().unwrap();
         let b = decks[1].pop_front().unwrap();
 
-        let a_is_winner = if a as usize <= decks[0].len() && b as usize <= decks[1].len() {
+        if if a as usize <= decks[0].len() && b as usize <= decks[1].len() {
             let mut subgame_decks = vec![
                 decks[0].iter().take(a as usize).cloned().collect(),
                 decks[1].iter().take(b as usize).cloned().collect(),
@@ -48,9 +48,7 @@ fn play(decks: &mut Vec<VecDeque<u8>>) {
             subgame_decks[1].is_empty()
         } else {
             a > b
-        };
-
-        if a_is_winner {
+        } {
             decks[0].push_back(a);
             decks[0].push_back(b);
         } else {
