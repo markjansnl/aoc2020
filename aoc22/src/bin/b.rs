@@ -40,10 +40,9 @@ fn play(decks: &mut Vec<VecDeque<u8>>) {
         let b = decks[1].pop_front().unwrap();
 
         if if a as usize <= decks[0].len() && b as usize <= decks[1].len() {
-            let mut subgame_decks = vec![
-                decks[0].iter().take(a as usize).cloned().collect(),
-                decks[1].iter().take(b as usize).cloned().collect(),
-            ];
+            let mut subgame_decks = decks.clone();
+            subgame_decks[0].truncate(a as usize);
+            subgame_decks[1].truncate(b as usize);
             play(&mut subgame_decks);
             subgame_decks[1].is_empty()
         } else {
