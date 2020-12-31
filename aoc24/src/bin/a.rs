@@ -13,8 +13,8 @@ fn count_black_tiles(input: &str) -> usize {
                         .fold((0i32, (0i32, 0i32)), |(dy, (y, x)), byte| match byte {
                             b'n' => (-1, (y, x)),
                             b's' => (1, (y, x)),
-                            b'e' => (0, (y + dy, x + 1 - dy.abs() * ((y + 1).abs() % 2))),
-                            b'w' => (0, (y + dy, x - 1 + dy.abs() * (y.abs() % 2))),
+                            b'e' => (0, (y + dy, x + 1 - (dy * (y + 1)).abs() % 2)),
+                            b'w' => (0, (y + dy, x - 1 + (dy * y).abs() % 2)),
                             _ => panic!("Wrong input"),
                         })
                         .1,
